@@ -1,0 +1,22 @@
+{
+  "name": "skill-usage-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time dashboard for skill invocation counts, duration, and health metrics.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "codex:install": "node scripts/codex-manager.js install",
+    "codex:start": "node scripts/codex-manager.js install-and-start",
+    "codex:stop": "node scripts/codex-manager.js stop",
+    "codex:status": "node scripts/codex-manager.js status"
+  },
+  "keywords": [
+    "dashboard",
+    "skills",
+    "analytics",
+    "sse",
+    "realtime"
+  ],
+  "author": "",
+  "license": "MIT"
+}

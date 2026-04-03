@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skill Pulse Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell signal-board-shell">
+      <section class="hero-panel command-bar">
+        <div class="hero-copy">
+          <p class="eyebrow">Realtime Skill Telemetry</p>
+          <h1>Skill Pulse Dashboard</h1>
+          <p class="hero-text">
+            用更清楚的浅色信号板视图，跟踪 skill 调用次数、健康度、延迟走势和最近活动。
+          </p>
+        </div>
+        <div class="hero-actions">
+          <div class="connection-pill" id="connection-pill">
+            <span class="pulse-dot"></span>
+            <span id="connection-text">连接中</span>
+          </div>
+          <button class="ghost-button" id="refresh-button" type="button">刷新快照</button>
+          <button class="primary-button" id="seed-button" type="button">注入演示数据</button>
+        </div>
+      </section>
+
+      <section class="hero-status-strip" id="hero-status-strip"></section>
+
+      <section class="first-screen-grid">
+        <section class="summary-grid" id="summary-grid"></section>
+
+        <article class="panel monitor-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Monitor Runtime</p>
+              <h2>监控状态总览</h2>
+            </div>
+            <p class="panel-meta" id="monitor-meta">读取中</p>
+          </div>
+          <div class="monitor-matrix" id="monitor-matrix"></div>
+        </article>
+      </section>
+
+      <section class="content-grid analytical-grid">
+        <article class="panel skill-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Skill Leaderboard</p>
+              <h2>调用榜单</h2>
+            </div>
+            <p class="panel-meta" id="skill-count-label">0 skills</p>
+          </div>
+          <div class="skill-list" id="skill-list"></div>
+        </article>
+
+        <article class="panel detail-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Focused Skill</p>
+              <h2 id="detail-title">暂无数据</h2>
+            </div>
+            <p class="panel-meta" id="detail-status">等待事件</p>
+          </div>
+          <div class="detail-body" id="detail-body"></div>
+        </article>
+      </section>
+
+      <section class="content-grid realtime-grid">
+        <article class="panel timeline-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">24h Activity</p>
+              <h2>调用趋势</h2>
+            </div>
+            <p class="panel-meta">按小时汇总</p>
+          </div>
+          <div class="timeline-chart" id="timeline-chart"></div>
+        </article>
+
+        <article class="panel stream-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Live Feed</p>
+              <h2>最近调用</h2>
+            </div>
+            <p class="panel-meta" id="recent-count-label">0 items</p>
+          </div>
+          <div class="event-stream" id="event-stream"></div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Invocation Ledger</p>
+            <h2>调用明细</h2>
+          </div>
+          <p class="panel-meta">最新 30 条</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Skill</th>
+                <th>状态</th>
+                <th>耗时</th>
+                <th>来源</th>
+                <th>模型</th>
+                <th>会话</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody id="event-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
