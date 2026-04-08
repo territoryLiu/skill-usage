@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>技能看板</title>
+    <title>历史 | 技能看板</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body data-page="home">
+  <body data-page="history">
     <main class="dashboard-shell">
       <header class="topbar panel-shell">
         <div class="brand-lockup">
@@ -17,13 +17,12 @@
           </div>
         </div>
         <nav class="page-nav" aria-label="主导航">
-          <a class="is-active" href="/" data-i18n="nav.home">首页</a>
+          <a href="/" data-i18n="nav.home">首页</a>
           <a href="/monitor.html" data-i18n="nav.monitor">监控</a>
           <a href="/trends.html" data-i18n="nav.trends">趋势</a>
-          <a href="/history.html" data-i18n="nav.history">历史</a>
+          <a class="is-active" href="/history.html" data-i18n="nav.history">历史</a>
         </nav>
         <div class="header-side">
-          <div class="timeframe-switch" id="timeframe-switch"></div>
           <div class="language-toggle" id="language-toggle"></div>
           <div class="connection-pill" id="connection-pill">
             <span class="pulse-dot"></span>
@@ -32,23 +31,25 @@
         </div>
       </header>
 
-      <section class="hero-panel panel-shell podium-panel podium-only">
-        <div id="podium-stage" class="podium-stage podium-stage-home"></div>
-      </section>
-
-      <section class="home-grid">
-        <div class="rankings-column">
-          <div id="leaderboard-list" class="leaderboard-list"></div>
+      <section class="history-hero history-page-shell">
+        <div class="history-heading">
+          <div class="section-heading">
+            <p class="eyebrow" data-i18n="history.hero.eyebrow">年度记录</p>
+            <h2 data-i18n="history.hero.title">历史</h2>
+          </div>
+          <p class="history-copy" data-i18n="history.hero.copy">把趋势和历史拆开后，信息层级会安静很多。</p>
         </div>
-
-        <aside class="sidebar-column">
-          <div id="summary-cards" class="summary-stack"></div>
-        </aside>
+        <div class="history-layout">
+          <div id="history-summary" class="history-summary"></div>
+          <div class="calendar-panel">
+            <div id="activity-calendar" class="activity-calendar-grid"></div>
+          </div>
+        </div>
       </section>
     </main>
 
     <script src="/scripts/dashboard-models.js"></script>
     <script src="/scripts/dashboard-core.js"></script>
-    <script src="/scripts/home-page.js"></script>
+    <script src="/scripts/history-page.js"></script>
   </body>
 </html>

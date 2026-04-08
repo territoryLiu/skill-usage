@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>趋势 | 技能看板</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="trends">
+    <main class="dashboard-shell">
+      <header class="topbar panel-shell">
+        <div class="brand-lockup">
+          <div class="brand-mark">SP</div>
+          <div>
+            <h1 data-i18n="brandTitle">技能看板</h1>
+          </div>
+        </div>
+        <nav class="page-nav" aria-label="主导航">
+          <a href="/" data-i18n="nav.home">首页</a>
+          <a href="/monitor.html" data-i18n="nav.monitor">监控</a>
+          <a class="is-active" href="/trends.html" data-i18n="nav.trends">趋势</a>
+          <a href="/history.html" data-i18n="nav.history">历史</a>
+        </nav>
+        <div class="header-side">
+          <div class="timeframe-switch" id="timeframe-switch"></div>
+          <div class="language-toggle" id="language-toggle"></div>
+          <div class="connection-pill" id="connection-pill">
+            <span class="pulse-dot"></span>
+            <span id="connection-text">实时连接正常</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel-shell feature-panel trend-panel">
+        <div class="section-heading split-heading">
+          <h2 data-i18n="trend.chart.eyebrow">时间趋势</h2>
+          <div id="focus-skill" class="focus-pill">全局</div>
+        </div>
+        <div id="timeline-chart" class="timeline-chart wide"></div>
+      </section>
+
+      <section class="panel-shell feature-panel">
+        <div class="section-heading">
+          <h2 data-i18n="trend.table.eyebrow">调用记录</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="table.skill">技能</th>
+                <th data-i18n="table.status">状态</th>
+                <th data-i18n="table.duration">耗时</th>
+                <th data-i18n="table.source">来源</th>
+                <th data-i18n="table.model">模型</th>
+                <th data-i18n="table.time">时间</th>
+              </tr>
+            </thead>
+            <tbody id="event-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/scripts/dashboard-core.js"></script>
+    <script src="/scripts/trends-page.js"></script>
+  </body>
+</html>

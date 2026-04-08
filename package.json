@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test tests/**/*.test.js",
     "codex:install": "node scripts/codex-manager.js install",
     "codex:start": "node scripts/codex-manager.js install-and-start",
     "codex:stop": "node scripts/codex-manager.js stop",

@@ -2,34 +2,24 @@ const http = require("node:http");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const path = require("node:path");
+const os = require("node:os");
 const { randomUUID } = require("node:crypto");
 const { URL } = require("node:url");
 const { startCodexLogMonitor } = require("./scripts/codex-log-monitor");
+const { buildSnapshot, normalizeRange } = require("./lib/snapshot");
 
 const PORT = Number(process.env.PORT || 3210);
 const HOST = process.env.HOST || "127.0.0.1";
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const SERVER_STARTED_AT = new Date().toISOString();
-const CODEX_HOME = process.env.CODEX_HOME || path.join(require("node:os").homedir(), ".codex");
+const CODEX_HOME = process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
 const DATA_DIR = path.join(CODEX_HOME, "data", "skill-usage");
 const EVENTS_FILE = path.join(DATA_DIR, "skill-events.jsonl");
 const PROCESS_STATE_FILE = path.join(ROOT_DIR, "data", "dashboard-process.json");
 const STDOUT_LOG_FILE = path.join(DATA_DIR, "dashboard.stdout.log");
 const STDERR_LOG_FILE = path.join(DATA_DIR, "dashboard.stderr.log");
-const MAX_RECENT_EVENTS = 30;
-const MAX_TIMELINE_BUCKETS = 24;
 const ENABLE_CODEX_MONITOR = process.env.ENABLE_CODEX_MONITOR === "1";
-const SKILL_COLORS = [
-  "#f06b59",
-  "#56b0e8",
-  "#f0b12c",
-  "#75c176",
-  "#d96fd2",
-  "#8d8cf7",
-  "#f18c6a",
-  "#55d1b4"
-];
 
 const sseClients = new Set();
 let broadcastTimer = null;
@@ -42,7 +32,9 @@ function mimeTypeFor(filePath) {
     ".css": "text/css; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
-    ".svg": "image/svg+xml"
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon"
   };
 
   return types[extension] || "application/octet-stream";
@@ -50,10 +42,7 @@ function mimeTypeFor(filePath) {
 
 function isPathInsideDirectory(parentDir, candidatePath) {
   const relativePath = path.relative(parentDir, candidatePath);
-  return (
-    relativePath === "" ||
-    (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
-  );
+  return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
 }
 
 async function ensureStorage() {
@@ -68,7 +57,6 @@ async function ensureStorage() {
 
 async function parseJsonBody(req) {
   const chunks = [];
-
   for await (const chunk of req) {
     chunks.push(chunk);
   }
@@ -100,6 +88,14 @@ function clampDuration(value) {
   return Math.max(0, Math.round(value));
 }
 
+function normalizeMetadata(metadata) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return {};
+  }
+
+  return metadata;
+}
+
 function isProcessAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) {
     return false;
@@ -111,14 +107,6 @@ function isProcessAlive(pid) {
   } catch (error) {
     return !error || error.code !== "ESRCH";
   }
-}
-
-function normalizeMetadata(metadata) {
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return {};
-  }
-
-  return metadata;
 }
 
 function normalizeEvent(rawEvent = {}) {
@@ -133,7 +121,6 @@ function normalizeEvent(rawEvent = {}) {
   const status = typeof rawEvent.status === "string" ? rawEvent.status.toLowerCase() : "success";
   const now = new Date();
   const startedAt = toDate(rawEvent.startedAt, now);
-
   let durationMs = clampDuration(Number(rawEvent.durationMs));
   let endedAt = rawEvent.endedAt ? toDate(rawEvent.endedAt, now) : null;
 
@@ -176,6 +163,25 @@ async function appendEvents(events) {
   await fsp.appendFile(EVENTS_FILE, payload, "utf8");
   scheduleBroadcast();
   return normalizedEvents;
+}
+
+async function readEvents() {
+  const content = await fsp.readFile(EVENTS_FILE, "utf8");
+  if (!content.trim()) {
+    return [];
+  }
+
+  return content
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 }
 
 async function getMonitorStatus() {
@@ -226,200 +232,10 @@ async function getMonitorStatus() {
   };
 }
 
-async function readEvents() {
-  const content = await fsp.readFile(EVENTS_FILE, "utf8");
-  if (!content.trim()) {
-    return [];
-  }
-
-  return content
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
-}
-
-function percentile(values, target) {
-  if (!values.length) {
-    return 0;
-  }
-
-  const index = Math.min(values.length - 1, Math.max(0, Math.ceil(target * values.length) - 1));
-  return values[index];
-}
-
-function groupTimeline(events) {
-  const now = new Date();
-  const bucketSizeMs = 60 * 60 * 1000;
-  const timeline = [];
-
-  for (let offset = MAX_TIMELINE_BUCKETS - 1; offset >= 0; offset -= 1) {
-    const bucketStart = new Date(now.getTime() - offset * bucketSizeMs);
-    bucketStart.setMinutes(0, 0, 0);
-    const key = bucketStart.toISOString();
-    timeline.push({
-      bucketStart: key,
-      label: `${String(bucketStart.getHours()).padStart(2, "0")}:00`,
-      calls: 0,
-      errors: 0,
-      totalDurationMs: 0
-    });
-  }
-
-  const lookup = new Map(timeline.map((item) => [item.bucketStart, item]));
-
-  for (const event of events) {
-    const bucketTime = new Date(event.startedAt);
-    bucketTime.setMinutes(0, 0, 0);
-    const bucketStart = bucketTime.toISOString();
-    const bucket = lookup.get(bucketStart);
-
-    if (!bucket) {
-      continue;
-    }
-
-    bucket.calls += 1;
-    bucket.totalDurationMs += event.durationMs || 0;
-    if (event.status === "error") {
-      bucket.errors += 1;
-    }
-  }
-
-  return timeline;
-}
-
-function buildSnapshot(events) {
-  const sortedEvents = [...events].sort(
-    (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime()
-  );
-  const completedEvents = sortedEvents.filter((event) => event.status !== "running");
-  const runningEvents = sortedEvents.filter((event) => event.status === "running");
-  const skillMap = new Map();
-
-  for (const event of sortedEvents) {
-    if (!skillMap.has(event.skill)) {
-      skillMap.set(event.skill, {
-        skill: event.skill,
-        calls: 0,
-        completedCalls: 0,
-        activeCalls: 0,
-        successes: 0,
-        errors: 0,
-        totalDurationMs: 0,
-        minDurationMs: Number.POSITIVE_INFINITY,
-        maxDurationMs: 0,
-        durations: [],
-        sources: new Map(),
-        models: new Map(),
-        sessions: new Map(),
-        lastSeenAt: event.startedAt,
-        lastStatus: event.status,
-        lastDetails: event.details,
-        color: SKILL_COLORS[skillMap.size % SKILL_COLORS.length]
-      });
-    }
-
-    const summary = skillMap.get(event.skill);
-    summary.calls += 1;
-    summary.lastSeenAt = summary.lastSeenAt > event.startedAt ? summary.lastSeenAt : event.startedAt;
-    summary.lastStatus = event.status;
-    summary.lastDetails = event.details || summary.lastDetails;
-
-    summary.sources.set(event.source, (summary.sources.get(event.source) || 0) + 1);
-    summary.models.set(event.model, (summary.models.get(event.model) || 0) + 1);
-    summary.sessions.set(event.sessionId, (summary.sessions.get(event.sessionId) || 0) + 1);
-
-    if (event.status === "running") {
-      summary.activeCalls += 1;
-      continue;
-    }
-
-    summary.completedCalls += 1;
-    summary.totalDurationMs += event.durationMs || 0;
-    summary.minDurationMs = Math.min(summary.minDurationMs, event.durationMs || 0);
-    summary.maxDurationMs = Math.max(summary.maxDurationMs, event.durationMs || 0);
-    summary.durations.push(event.durationMs || 0);
-
-    if (event.status === "error") {
-      summary.errors += 1;
-    } else {
-      summary.successes += 1;
-    }
-  }
-
-  const skills = [...skillMap.values()]
-    .map((summary) => {
-      summary.durations.sort((a, b) => a - b);
-      const avgDurationMs = summary.completedCalls
-        ? Math.round(summary.totalDurationMs / summary.completedCalls)
-        : 0;
-      const failureRate = summary.completedCalls
-        ? Number(((summary.errors / summary.completedCalls) * 100).toFixed(1))
-        : 0;
-
-      return {
-        skill: summary.skill,
-        calls: summary.calls,
-        completedCalls: summary.completedCalls,
-        activeCalls: summary.activeCalls,
-        successes: summary.successes,
-        errors: summary.errors,
-        totalDurationMs: summary.totalDurationMs,
-        avgDurationMs,
-        minDurationMs: Number.isFinite(summary.minDurationMs) ? summary.minDurationMs : 0,
-        maxDurationMs: summary.maxDurationMs,
-        p95DurationMs: percentile(summary.durations, 0.95),
-        failureRate,
-        sourceBreakdown: [...summary.sources.entries()]
-          .sort((left, right) => right[1] - left[1])
-          .map(([label, value]) => ({ label, value })),
-        modelBreakdown: [...summary.models.entries()]
-          .sort((left, right) => right[1] - left[1])
-          .map(([label, value]) => ({ label, value })),
-        sessionCount: summary.sessions.size,
-        lastSeenAt: summary.lastSeenAt,
-        lastStatus: summary.lastStatus,
-        lastDetails: summary.lastDetails,
-        color: summary.color
-      };
-    })
-    .sort((left, right) => right.calls - left.calls || right.totalDurationMs - left.totalDurationMs);
-
-  const totalCompletedCalls = completedEvents.length;
-  const totalErrors = completedEvents.filter((event) => event.status === "error").length;
-  const totalDurationMs = completedEvents.reduce((sum, event) => sum + (event.durationMs || 0), 0);
-
-  return {
-    generatedAt: new Date().toISOString(),
-    summary: {
-      totalCalls: sortedEvents.length,
-      completedCalls: totalCompletedCalls,
-      activeCalls: runningEvents.length,
-      uniqueSkills: skills.length,
-      totalDurationMs,
-      avgDurationMs: totalCompletedCalls ? Math.round(totalDurationMs / totalCompletedCalls) : 0,
-      errorRate: totalCompletedCalls ? Number(((totalErrors / totalCompletedCalls) * 100).toFixed(1)) : 0,
-      successRate: totalCompletedCalls
-        ? Number((((totalCompletedCalls - totalErrors) / totalCompletedCalls) * 100).toFixed(1))
-        : 0
-    },
-    skills,
-    timeline: groupTimeline(sortedEvents),
-    activeEvents: runningEvents.slice(0, MAX_RECENT_EVENTS),
-    recentEvents: sortedEvents.slice(0, MAX_RECENT_EVENTS)
-  };
-}
-
-async function getSnapshot() {
+async function getSnapshot(range = "12h") {
   const events = await readEvents();
   return {
-    ...buildSnapshot(events),
+    ...buildSnapshot(events, { range }),
     monitor: await getMonitorStatus()
   };
 }
@@ -464,7 +280,7 @@ async function broadcastSnapshot() {
     return;
   }
 
-  const payload = `event: snapshot\ndata: ${JSON.stringify(await getSnapshot())}\n\n`;
+  const payload = `event: snapshot\ndata: ${JSON.stringify(await getSnapshot("12h"))}\n\n`;
   for (const client of sseClients) {
     client.write(payload);
   }
@@ -503,7 +319,7 @@ function generateDemoEvents(count = 80) {
   return Array.from({ length: count }, (_, index) => {
     const skill = skills[Math.floor(Math.random() * skills.length)];
     const durationMs = Math.round(300 + Math.random() * 180000);
-    const startedAt = new Date(Date.now() - Math.random() * 1000 * 60 * 60 * 20);
+    const startedAt = new Date(Date.now() - Math.random() * 1000 * 60 * 60 * 24 * 320);
     const endedAt = new Date(startedAt.getTime() + durationMs);
     const failed = Math.random() > 0.88;
 
@@ -529,7 +345,8 @@ function generateDemoEvents(count = 80) {
 
 async function handleApi(req, res, pathname, url) {
   if (req.method === "GET" && pathname === "/api/stats") {
-    sendJson(res, 200, await getSnapshot());
+    const range = normalizeRange(url.searchParams.get("range") || "12h");
+    sendJson(res, 200, await getSnapshot(range));
     return;
   }
 
@@ -557,7 +374,7 @@ async function handleApi(req, res, pathname, url) {
 
     res.write(": connected\n\n");
     sseClients.add(res);
-    res.write(`event: snapshot\ndata: ${JSON.stringify(await getSnapshot())}\n\n`);
+    res.write(`event: snapshot\ndata: ${JSON.stringify(await getSnapshot("12h"))}\n\n`);
 
     const heartbeat = setInterval(() => {
       res.write(`event: heartbeat\ndata: {"ts":"${new Date().toISOString()}"}\n\n`);
@@ -587,9 +404,7 @@ async function requestHandler(req, res) {
     await serveStatic(res, pathname);
   } catch (error) {
     const statusCode = error.statusCode || 500;
-    sendJson(res, statusCode, {
-      error: error.message || "Unexpected server error."
-    });
+    sendJson(res, statusCode, { error: error.message || "Unexpected server error." });
   }
 }
 
