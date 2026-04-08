@@ -23,7 +23,6 @@
           <a href="/history.html" data-i18n="nav.history">历史</a>
         </nav>
         <div class="header-side">
-          <div class="timeframe-switch" id="timeframe-switch"></div>
           <div class="language-toggle" id="language-toggle"></div>
           <div class="connection-pill" id="connection-pill">
             <span class="pulse-dot"></span>
@@ -35,7 +34,10 @@
       <section class="panel-shell feature-panel trend-panel">
         <div class="section-heading split-heading">
           <h2 data-i18n="trend.chart.eyebrow">时间趋势</h2>
-          <div id="focus-skill" class="focus-pill">全局</div>
+          <div class="page-tools trend-tools">
+            <div id="focus-skill" class="focus-pill">全局</div>
+            <div class="timeframe-switch" id="timeframe-switch"></div>
+          </div>
         </div>
         <div id="timeline-chart" class="timeline-chart wide"></div>
       </section>

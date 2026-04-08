@@ -524,6 +524,22 @@ a {
   border: 1px solid var(--line-soft);
 }
 
+.page-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.home-tools {
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.trend-tools {
+  justify-content: flex-end;
+}
+
 .summary-stack,
 .leaderboard-list,
 .event-stream,
@@ -1065,6 +1081,7 @@ a {
 
   .brand-lockup,
   .header-side,
+  .page-tools,
   .hero-actions,
   .feed-topline,
   .monitor-card-top,
@@ -1105,6 +1122,5 @@ a {
     gap: 8px 6px;
   }
 }
-
 
 
