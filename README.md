@@ -1,28 +1,28 @@
-# Skill Usage Dashboard
+# Skill 使用看板
 
-A zero-dependency real-time dashboard for monitoring skill invocations across Claude Code and Codex sessions.
+一个零依赖的实时看板，用于监控 Claude Code 和 Codex 会话中的 Skill 调用情况。
 
-## Capabilities
+## 功能特性
 
-- Real-time statistics: total calls, cumulative/average duration, success rate, active calls
-- Per-skill leaderboard: call count, avg/P95/max duration, failure rate, source/model breakdown
-- Live updates via Server-Sent Events (no manual refresh needed)
-- JSONL persistence for external tooling integration
-- 24-hour timeline with hourly aggregation
-- Demo data injection for testing
-- Optional Codex auto-monitoring via local `sessions/**/*.jsonl`
-- Built-in monitor status panel for PID, log path, and Codex home visibility
-- Copy-to-clipboard path actions and recent monitor heartbeat timestamps
+- 实时统计：总调用次数、累计/平均耗时、成功率、活跃调用数
+- 按 Skill 排行：调用次数、平均/P95/最大耗时、失败率、来源/模型分布
+- 基于 Server-Sent Events 的实时更新，无需手动刷新
+- JSONL 持久化，方便接入外部工具
+- 24 小时时间线，按小时聚合
+- 支持注入演示数据，便于测试
+- 可选开启 Codex 本地 `sessions/**/*.jsonl` 自动监控
+- 内置监控状态面板，可查看 PID、日志路径和 Codex Home
+- 支持一键复制路径，以及查看最近一次监控心跳时间戳
 
-## Quick Start
+## 快速开始
 
 ```bash
 npm start
 ```
 
-Then open: http://127.0.0.1:3210
+然后打开： http://127.0.0.1:3210
 
-To inject demo data, click "注入演示数据".
+如果要注入演示数据，点击“注入演示数据”。
 
 ## Codex 一键安装与自动监控
 
@@ -40,13 +40,13 @@ Codex 监控入口统一使用 `codex-manager.js` / `npm run codex:*`。
 npm run codex:start
 ```
 
-Windows:
+Windows：
 
 ```bat
 scripts\start-codex-monitor.cmd
 ```
 
-Ubuntu:
+Ubuntu：
 
 ```bash
 chmod +x scripts/start-codex-monitor.sh
@@ -82,13 +82,13 @@ C:\Users\<你的用户名>\.codex\sessions
 npm run codex:stop
 ```
 
-Windows:
+Windows：
 
 ```bat
 scripts\stop-codex-monitor.cmd
 ```
 
-Ubuntu:
+Ubuntu：
 
 ```bash
 chmod +x scripts/stop-codex-monitor.sh
@@ -101,13 +101,13 @@ chmod +x scripts/stop-codex-monitor.sh
 npm run codex:status
 ```
 
-Windows:
+Windows：
 
 ```bat
 scripts\status-codex-monitor.cmd
 ```
 
-Ubuntu:
+Ubuntu：
 
 ```bash
 chmod +x scripts/status-codex-monitor.sh
@@ -129,18 +129,18 @@ node scripts/codex-manager.js reset-data
 - 自动写入 `CODEX_HOME/data/skill-usage` 下的事件流和 JSONL 数据文件
 - 启动前会检查 `dashboard-process.json`，已在运行时不会重复拉起
 
-## API Endpoints
+## API 接口
 
-| Endpoint | Method | Description |
+| 接口 | 方法 | 说明 |
 |----------|--------|-------------|
-| `/api/stats` | GET | Aggregated statistics snapshot |
-| `/api/events` | POST | Write one or more events |
-| `/api/stream` | GET | SSE real-time updates |
-| `/api/demo/seed` | POST | Inject demo data |
+| `/api/stats` | GET | 返回聚合统计快照 |
+| `/api/events` | POST | 写入一条或多条事件 |
+| `/api/stream` | GET | SSE 实时更新流 |
+| `/api/demo/seed` | POST | 注入演示数据 |
 
-## Event Format
+## 事件格式
 
-POST to `/api/events`:
+向 `/api/events` 发送 POST：
 
 ```json
 {
@@ -158,7 +158,7 @@ POST to `/api/events`:
 }
 ```
 
-## Example Usage
+## 使用示例
 
 ### PowerShell
 
@@ -182,19 +182,19 @@ curl -X POST http://127.0.0.1:3210/api/events \
   -d '{"skill":"pdf","status":"success","durationMs":3400}'
 ```
 
-## File Structure
+## 目录结构
 
-```
+```text
 skill-usage/
-├── SKILL.md              # Skill definition for Claude Code / Codex
-├── server.js             # Node HTTP server (zero dependencies)
-├── package.json          # npm scripts
-├── public/               # Frontend assets
-│   ├── index.html        # Dashboard UI
-│   ├── app.js            # Client-side rendering
-│   └── styles.css        # Signal Board styling
+├── SKILL.md              # Claude Code / Codex 的 Skill 定义
+├── server.js             # Node HTTP 服务（零依赖）
+├── package.json          # npm 脚本
+├── public/               # 前端静态资源
+│   ├── index.html        # 看板首页
+│   ├── app.js            # 客户端渲染逻辑
+│   └── styles.css        # Signal Board 样式
 ├── scripts/
-│   ├── codex-manager.js   # Cross-platform install/start/stop manager
+│   ├── codex-manager.js   # 跨平台安装 / 启动 / 停止管理器
 │   ├── codex-log-monitor.js
 │   ├── start-codex-monitor.cmd
 │   ├── start-codex-monitor.sh
@@ -203,10 +203,10 @@ skill-usage/
 │   ├── status-codex-monitor.cmd
 │   └── status-codex-monitor.sh
 └── data/
-    └── dashboard-process.json # Managed process state (single skill directory)
+    └── dashboard-process.json # 托管进程状态（单 skill 目录模型）
 ```
 
-Persistent runtime data location:
+运行时持久化数据目录：
 
 ```text
 CODEX_HOME/data/skill-usage/
@@ -215,13 +215,13 @@ CODEX_HOME/data/skill-usage/
 └── dashboard.stderr.log
 ```
 
-## Configuration
+## 配置项
 
-| Variable | Default | Description |
+| 变量 | 默认值 | 说明 |
 |----------|---------|-------------|
-| `PORT` | 3210 | Server port |
-| `HOST` | 127.0.0.1 | Bind address |
-| `ENABLE_CODEX_MONITOR` | `0` | Enable Codex log watcher when set to `1` |
-| `CODEX_HOME` | `%USERPROFILE%\.codex` | Codex home directory |
-| `CODEX_MONITOR_POLL_MS` | `1500` | Log polling interval |
-| `CODEX_MONITOR_IDLE_MS` | `12000` | Idle window before a detected use is flushed |
+| `PORT` | 3210 | 服务端口 |
+| `HOST` | 127.0.0.1 | 绑定地址 |
+| `ENABLE_CODEX_MONITOR` | `0` | 设为 `1` 时开启 Codex 日志监控 |
+| `CODEX_HOME` | `%USERPROFILE%\.codex` | Codex 主目录 |
+| `CODEX_MONITOR_POLL_MS` | `1500` | 日志轮询间隔 |
+| `CODEX_MONITOR_IDLE_MS` | `12000` | 识别到一次调用后，空闲多久才落盘 |
